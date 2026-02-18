@@ -1,0 +1,41 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.12, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\ishai\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe
+cachedir: .pytest_cache
+rootdir: I:\python projects\quant_pm
+plugins: cov-7.0.0
+collecting ... collected 0 items / 2 errors
+
+=================================== ERRORS ====================================
+_______________ ERROR collecting tests/test_orders_and_exits.py _______________
+ImportError while importing test module 'I:\python projects\quant_pm\tests\test_orders_and_exits.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_orders_and_exits.py:27: in <module>
+    from risk.engine import compute_transaction_cost
+risk\engine.py:9: in <module>
+    import numpy as np
+E   ModuleNotFoundError: No module named 'numpy'
+______________ ERROR collecting tests/test_state_persistence.py _______________
+ImportError while importing test module 'I:\python projects\quant_pm\tests\test_state_persistence.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_state_persistence.py:20: in <module>
+    from portfolio_manager import PortfolioManager, OpenPosition
+portfolio_manager.py:35: in <module>
+    from data.features import build_features, run_feature_pipeline, FEATURE_COLS
+data\features.py:9: in <module>
+    import numpy as np
+E   ModuleNotFoundError: No module named 'numpy'
+=========================== short test summary info ===========================
+ERROR tests/test_orders_and_exits.py
+ERROR tests/test_state_persistence.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!
+============================== 2 errors in 0.44s ==============================
+
+---STDERR---
