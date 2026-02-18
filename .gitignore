@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Model artifacts
+models/saved/
+*.pkl
+
+# Runtime state
+portfolio_state.json
+
+# Audit logs
+audit/logs/
+*.jsonl
+
+# Reports
+reporting/daily/
+
+# Logs
+*.log
+portfolio_manager.log
+
+# OS
+.DS_Store
+Thumbs.db
