@@ -51,15 +51,47 @@ from reporting.daily_report import (
 )
 from utils.fs_atomic import atomic_write_json
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("portfolio_manager.log", mode="a")
-    ]
-)
+
+# Robust logging (UTF-8 safe for Windows consoles)
+import io
+import sys
+
+LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+
+# Create a StreamHandler that wraps stdout with UTF-8 and replaces unencodable chars
+try:
+    stream = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    stream_handler = logging.StreamHandler(stream)
+except Exception:
+    # Fallback: use default StreamHandler if stdout.buffer is not available
+    stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+
+# FileHandler with UTF-8 encoding
+file_handler = logging.FileHandler("portfolio_manager.log", mode="a", encoding="utf-8")
+file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+
+# Configure root logger
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+# remove pre-configured handlers if any
+for h in list(root_logger.handlers):
+    root_logger.removeHandler(h)
+root_logger.addHandler(stream_handler)
+root_logger.addHandler(file_handler)
+
 log = logging.getLogger("portfolio_manager")
+
+
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+#     handlers=[
+#         logging.StreamHandler(),
+#         logging.FileHandler("portfolio_manager.log", mode="a")
+#     ]
+# )
+# log = logging.getLogger("portfolio_manager")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
