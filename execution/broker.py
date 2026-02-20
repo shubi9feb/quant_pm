@@ -148,6 +148,7 @@ class PaperBroker:
         - Always accepted
         - Immediate full fill at requested entry price
         """
+        assert order.entry_price > 0, f"Invalid price for order {order.client_order_id}"
         # Track the order
         self._orders[order.client_order_id] = order
         order.status = OrderStatus.FILLED
@@ -472,7 +473,7 @@ def build_exit_order(
         symbol          = symbol,
         side            = OrderSide.SELL,
         quantity        = quantity,
-        entry_price     = 0,   # market order
+        entry_price = float(current_price),   # market order
         stop_loss_price = 0,
         target_price    = 0,
         trailing_trigger= 0,

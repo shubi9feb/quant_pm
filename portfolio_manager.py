@@ -435,6 +435,7 @@ class PortfolioManager:
                 # continue
 
                 # ---------- Robust exit handling (replace old exit block) ----------
+                # ------------------ STOP HIT: robust exit handling ------------------
                 exit_order = build_exit_order(
                     sym, pos.quantity, current_price,
                     f"STOP_HIT_at_{pos.current_stop:.2f}", MODEL_VERSION
@@ -442,6 +443,7 @@ class PortfolioManager:
 
                 resp = self.broker.place_order(exit_order)
                 self.audit.log_order(resp, "PLACED")
+                log.info(f"[DEBUG] Broker response: filled_qty={getattr(resp, 'filled_qty', None)}, avg_price={getattr(resp, 'avg_fill_price', None)}")
 
                 # canonical order id
                 order_id = getattr(resp, "client_order_id", getattr(exit_order, "client_order_id", None))
@@ -470,25 +472,42 @@ class PortfolioManager:
                         avg_fill_price = None
 
                 # 3) Ask order_book as authoritative fallback if resp lacks info or it's zero
-                if (filled_qty is None) or (not avg_fill_price) or avg_fill_price <= 1e-9:
+                if (filled_qty is None) or (avg_fill_price is None) or (avg_fill_price <= 1e-9):
+                    ob = None
                     try:
-                        ob = self.order_book.get_order(order_id)  # implement get_order in order_book if not present
+                        ob_entry = self.order_book.get_order(order_id)
+                        # get_order should return OrderBookEntry or dict (we handle both)
+                        if ob_entry is not None:
+                            if hasattr(ob_entry, "to_dict"):
+                                ob = ob_entry.to_dict()  # dict-safe fallback
+                            elif isinstance(ob_entry, dict):
+                                ob = ob_entry
                     except Exception:
                         ob = None
 
                     if ob:
-                        # order_book stores fields differently in implementations; try several keys
+                        # best-effort mapping from various possible keys
                         if filled_qty is None:
                             filled_qty = int(ob.get("filled_qty") or ob.get("filled") or ob.get("filled_qty", 0) or 0)
 
-                        avg_fill_price = avg_fill_price or ob.get("avg_fill_price") or ob.get("fill_price") or ob.get("price") or None
+                        if avg_fill_price is None or (avg_fill_price <= 1e-9):
+                            avg_fill_price = (
+                                ob.get("avg_fill_price")
+                                or ob.get("fill_price")
+                                or ob.get("price")
+                                or None
+                            )
+                            if avg_fill_price is not None:
+                                try:
+                                    avg_fill_price = float(avg_fill_price)
+                                except Exception:
+                                    avg_fill_price = None
 
-                # 4) Final fallbacks: assume full qty, and use current_price if we still don't have price
+                # 4) Final fallbacks: assume full qty, and use market close price if we still don't have price
                 if filled_qty is None:
                     filled_qty = pos.quantity
 
                 if (avg_fill_price is None) or (avg_fill_price <= 1e-9):
-                    # log critical fallback so we can fix MockBroker/order_book
                     log.error(f"[PM][FALLBACK] Missing fill price for {sym} order_id={order_id}. Falling back to market close price {current_price}")
                     avg_fill_price = float(current_price)
 
@@ -500,13 +519,13 @@ class PortfolioManager:
                 gross_pnl = (avg_fill_price - pos.avg_cost) * filled_qty
                 net_pnl = gross_pnl - costs["total_cost"]
 
-                # Update accounting
+                # Update accounting (rounded where appropriate)
                 self.realised_pnl += net_pnl
                 self.cash += proceeds - costs["total_cost"]
 
-                # Persist order info into order_book if not already
+                # Persist order info into order_book (add if missing, then update)
                 try:
-                    # keep order_book consistent: if order not present, add; otherwise update
+                    # add if missing
                     if not self.order_book.has_order(order_id):
                         self.order_book.add_order(
                             client_order_id=order_id,
@@ -515,11 +534,13 @@ class PortfolioManager:
                             requested_qty=pos.quantity,
                             entry_price=avg_fill_price
                         )
+
+                    # update with definitive fill info (ensure update_fill accepts avg_fill_price)
                     self.order_book.update_fill(
                         client_order_id=order_id,
                         filled_qty=filled_qty,
-                        status="FILLED" if filled_qty >= pos.quantity else "PARTIAL",
-                        avg_fill_price=avg_fill_price
+                        avg_fill_price=avg_fill_price,
+                        status="FILLED" if filled_qty >= pos.quantity else "PARTIAL"
                     )
                 except Exception as e:
                     log.warning(f"[PM] order_book persist failed for {order_id}: {e}")
@@ -529,7 +550,7 @@ class PortfolioManager:
                     symbol=sym,
                     action="STOP_HIT",
                     quantity=filled_qty,
-                    price=avg_fill_price,
+                    price=round(avg_fill_price, 2),
                     value=round(proceeds, 2),
                     realised_pnl=round(net_pnl, 2),
                     reason="stop_loss_triggered",
@@ -548,6 +569,8 @@ class PortfolioManager:
                     pos.stop_status = "PARTIAL_EXIT"
 
                 continue
+# ---------------------------------------------------------------------
+
 # ---------- end robust exit handling ----------
 
 # ---------- end STOP CHECK & EXIT HANDLING ----------
@@ -822,6 +845,7 @@ class PortfolioManager:
                 self.order_book.update_fill(
                     client_order_id=getattr(resp, "client_order_id", getattr(order, "client_order_id", None)),
                     filled_qty=filled_qty,
+                    avg_fill_price=fill_price,
                     status="FILLED" if filled_qty == size.shares else "PARTIAL"
                 )
 
