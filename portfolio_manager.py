@@ -84,15 +84,7 @@ root_logger.addHandler(file_handler)
 log = logging.getLogger("portfolio_manager")
 
 
-# logging.basicConfig(
-#     level=logging.INFO,
-#     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-#     handlers=[
-#         logging.StreamHandler(),
-#         logging.FileHandler("portfolio_manager.log", mode="a")
-#     ]
-# )
-# log = logging.getLogger("portfolio_manager")
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -268,174 +260,16 @@ class PortfolioManager:
             current_atr   = eod_prices[sym].get("atr_14", pos.atr_at_entry)
             log.info(f"[DEBUG] Checking {sym} | price={current_price} | stop={pos.current_stop}")
 
+            # Skip if price above stop
             if current_price > pos.current_stop:
                 continue
-            # Check if stop hit
-                        
-            # if current_price <= pos.current_stop:
-            #     log.info(f"[PM] STOP HIT: {sym} @ ₹{current_price:.2f} (stop=₹{pos.current_stop:.2f})")
 
-            #     exit_order = build_exit_order(
-            #         sym, pos.quantity, current_price,
-            #         f"STOP_HIT_at_{pos.current_stop:.2f}", MODEL_VERSION
-            #     )
-
-            #     resp = self.broker.place_order(exit_order)
-            #     self.audit.log_order(resp, "PLACED")
-
-            #     # If broker rejected the exit order, mark pending and audit
-            #     if not getattr(resp, "accepted", False):
-            #         reason = getattr(resp, "reason", "unknown")
-            #         log.error(f"[PM] Exit order rejected for {sym}: {reason}")
-            #         pos.stop_status = "PENDING_EXIT"
-            #         self.audit.write(
-            #             AuditEventType.EXIT_ORDER_REJECTED,
-            #             {"symbol": sym, "reason": reason, "run_id": self.run_id},
-            #             symbol=sym
-            #         )
-            #         continue
-
-            #     # Use actual filled qty/price if present; fallback to market close price & full qty
-            #     filled_qty = int(getattr(resp, "filled_qty", pos.quantity))
-            #     fill_price = float(getattr(resp, "avg_fill_price", current_price))
-
-            #     # Compute amounts
-            #     proceeds = fill_price * filled_qty
-            #     costs = compute_transaction_cost(proceeds, "SELL")
-            #     # gross PnL per share * qty
-            #     gross_pnl = (fill_price - pos.avg_cost) * filled_qty
-            #     realized_trade_pnl = gross_pnl - costs["total_cost"]
-
-            #     # Update accounting (only once)
-            #     # self.realised_pnl += realized_trade_pnl
-            #     # Cash increases by proceeds minus transaction costs
-            #     self.cash += proceeds - costs["total_cost"]
-
-            #     # Record exit in persistent order book (single source of truth)
-            #     exit_order_id = getattr(resp, "client_order_id", getattr(exit_order, "client_order_id", None))
-            #     self.order_book.add_order(
-            #         client_order_id=exit_order_id,
-            #         symbol=sym,
-            #         side="SELL",
-            #         requested_qty=pos.quantity,
-            #         entry_price=fill_price
-            #     )
-            #     self.order_book.update_fill(
-            #         client_order_id=exit_order_id,
-            #         filled_qty=filled_qty,
-            #         status="FILLED" if filled_qty >= pos.quantity else "PARTIAL"
-            #     )
-
-            #     # Append a single TradeRecord with realized PnL
-            #     exits_today.append(TradeRecord(
-            #         symbol           = sym,
-            #         action           = "STOP_HIT",
-            #         quantity         = filled_qty,
-            #         price            = fill_price,
-            #         value            = proceeds,
-            #         realised_pnl     = realized_trade_pnl,
-            #         reason           = "stop_loss_triggered",
-            #         model_prob       = pos.model_prob,
-            #         stop_price       = pos.current_stop,
-            #         cost_inr         = costs["total_cost"],
-            #         client_order_id  = exit_order_id,
-            #         timestamp        = datetime.now().isoformat()
-            #     ))
-
-            #     # Remove or adjust position based on filled_qty (single update)
-            #     if filled_qty >= pos.quantity:
-            #         del self.positions[sym]
-            #     else:
-            #         pos.quantity -= filled_qty
-            #         pos.stop_status = "PARTIAL_EXIT"
-            #         log.info(f"[PM] Partial exit for {sym}: remaining qty={pos.quantity}")
-
-            #     # continue to next position after handling stop
-            #     continue
-
-
-           # ---------- STOP CHECK & EXIT HANDLING (replace the old chunk with this) ----------
-            # debug already printed above
-            # Only proceed if a stop exists and it's been hit
+            # ── STOP HIT: robust exit handling ─────────────────────────────
             if pos.current_stop is not None and current_price <= pos.current_stop:
                 log.info(f"[PM] STOP HIT: {sym} @ ₹{current_price:.2f} (stop=₹{pos.current_stop:.2f})")
                 log.error(f"[CRITICAL] EXIT CALLED for {sym} | price={current_price} | stop={pos.current_stop}")
 
-                # exit_order = build_exit_order(
-                #     sym, pos.quantity, current_price,
-                #     f"STOP_HIT_at_{pos.current_stop:.2f}", MODEL_VERSION
-                # )
 
-                # resp = self.broker.place_order(exit_order)
-                # self.audit.log_order(resp, "PLACED")
-
-                # # If rejected
-                # if not getattr(resp, "accepted", False):
-                #     log.error(f"[PM] Exit order rejected for {sym}")
-                #     pos.stop_status = "PENDING_EXIT"
-                #     # do not delete position — leave for reconciliation/ops
-                #     continue
-
-                # # Determine fill info
-                # filled_qty = int(getattr(resp, "filled_qty", pos.quantity))
-                # fill_price = float(getattr(resp, "avg_fill_price", current_price))
-
-                # proceeds = fill_price * filled_qty
-                # costs = compute_transaction_cost(proceeds, "SELL")
-
-                # # CORRECT PnL: gross then net after explicit costs
-                # gross_pnl = (fill_price - pos.avg_cost) * filled_qty
-                # net_pnl = gross_pnl - costs["total_cost"]
-
-                # # Update accounting
-                # self.realised_pnl += net_pnl
-                # self.cash += proceeds - costs["total_cost"]
-
-                # # Track order in order book
-                # order_id = getattr(resp, "client_order_id", getattr(exit_order, "client_order_id", None))
-
-                # self.order_book.add_order(
-                #     client_order_id=order_id,
-                #     symbol=sym,
-                #     side="SELL",
-                #     requested_qty=pos.quantity,
-                #     entry_price=fill_price
-                # )
-
-                # self.order_book.update_fill(
-                #     client_order_id=order_id,
-                #     filled_qty=filled_qty,
-                #     status="FILLED" if filled_qty >= pos.quantity else "PARTIAL"
-                # )
-
-                # # Append single TradeRecord with cost + realised pnl
-                # exits_today.append(TradeRecord(
-                #     symbol=sym,
-                #     action="STOP_HIT",
-                #     quantity=filled_qty,
-                #     price=fill_price,
-                #     value=proceeds,
-                #     realised_pnl=net_pnl,
-                #     reason="stop_loss_triggered",
-                #     model_prob=pos.model_prob,
-                #     stop_price=pos.current_stop,
-                #     cost_inr=costs["total_cost"],
-                #     client_order_id=order_id,
-                #     timestamp=datetime.now().isoformat()
-                # ))
-
-                # # Remove or reduce the position (single place where we mutate positions)
-                # if filled_qty >= pos.quantity:
-                #     del self.positions[sym]
-                # else:
-                #     pos.quantity -= filled_qty
-                #     pos.stop_status = "PARTIAL_EXIT"
-
-                # # done with this symbol
-                # continue
-
-                # ---------- Robust exit handling (replace old exit block) ----------
-                # ------------------ STOP HIT: robust exit handling ------------------
                 exit_order = build_exit_order(
                     sym, pos.quantity, current_price,
                     f"STOP_HIT_at_{pos.current_stop:.2f}", MODEL_VERSION
@@ -569,89 +403,6 @@ class PortfolioManager:
                     pos.stop_status = "PARTIAL_EXIT"
 
                 continue
-# ---------------------------------------------------------------------
-
-# ---------- end robust exit handling ----------
-
-# ---------- end STOP CHECK & EXIT HANDLING ----------
-
-
-            # if pos.current_stop is not None and current_price <= pos.current_stop:
-            #     log.info(f"[PM] STOP HIT: {sym} @ ₹{current_price:.2f} (stop=₹{pos.current_stop:.2f})")
-            #     log.error(f"[CRITICAL] EXIT CALLED for {sym} | price={current_price} | stop={pos.current_stop}")
-
-            # exit_order = build_exit_order(
-            #     sym, pos.quantity, current_price,
-            #     f"STOP_HIT_at_{pos.current_stop:.2f}", MODEL_VERSION
-            # )
-
-            # resp = self.broker.place_order(exit_order)
-            # self.audit.log_order(resp, "PLACED")
-
-            # # If rejected
-            # if not getattr(resp, "accepted", False):
-            #     log.error(f"[PM] Exit order rejected for {sym}")
-            #     pos.stop_status = "PENDING_EXIT"
-            #     continue
-
-            # filled_qty = int(getattr(resp, "filled_qty", pos.quantity))
-            # fill_price = float(getattr(resp, "avg_fill_price", current_price))
-
-            # proceeds = fill_price * filled_qty
-            # costs = compute_transaction_cost(proceeds, "SELL")
-
-            # # ✅ CORRECT PnL
-            # gross_pnl = (fill_price - pos.avg_cost) * filled_qty
-            # net_pnl = gross_pnl - costs["total_cost"]
-
-            # # ✅ UPDATE SYSTEM STATE
-            # self.realised_pnl += net_pnl
-            # self.cash += proceeds - costs["total_cost"]
-
-            # # Track order
-            # order_id = getattr(resp, "client_order_id", exit_order.client_order_id)
-
-            # self.order_book.add_order(
-            #     client_order_id=order_id,
-            #     symbol=sym,
-            #     side="SELL",
-            #     requested_qty=pos.quantity,
-            #     entry_price=fill_price
-            # )
-
-            # self.order_book.update_fill(
-            #     client_order_id=order_id,
-            #     filled_qty=filled_qty,
-            #     status="FILLED" if filled_qty >= pos.quantity else "PARTIAL"
-            # )
-
-            # # Record trade
-            # exits_today.append(TradeRecord(
-            #     symbol=sym,
-            #     action="STOP_HIT",
-            #     quantity=filled_qty,
-            #     price=fill_price,
-            #     value=proceeds,
-            #     realised_pnl=net_pnl,
-            #     reason="stop_loss_triggered",
-            #     model_prob=pos.model_prob,
-            #     stop_price=pos.current_stop,
-            #     cost_inr=costs["total_cost"],
-            #     client_order_id=order_id,
-            #     timestamp=datetime.now().isoformat()
-            # ))
-
-            # # Remove / reduce position
-            # if filled_qty >= pos.quantity:
-            #     del self.positions[sym]
-            # else:
-            #     pos.quantity -= filled_qty
-            #     pos.stop_status = "PARTIAL_EXIT"
-
-            # continue
-
-
-
 
             # Update trailing stop
             update = self.trail_engine.update(
@@ -776,14 +527,6 @@ class PortfolioManager:
                     }
                 )
 
-                # self.broker.place_order(order)
-                # self.audit.log_order(order, "PLACED")
-
-                # # Reserve cash
-                # total_cost   = size.position_value + costs["total_cost"]
-                # self.cash   -= total_cost
-
-                
 
                 # ── Place bracket order (robust handling) ───────────────────────────────
                 resp = self.broker.place_order(order)

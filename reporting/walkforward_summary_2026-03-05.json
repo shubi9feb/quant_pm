@@ -1,0 +1,8 @@
+{
+  "perf": {
+    "ann_return": NaN,
+    "ann_vol": NaN,
+    "sharpe": NaN,
+    "max_drawdown": 0.0
+  }
+}

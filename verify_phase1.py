@@ -6,6 +6,12 @@ Tests atomic operations and OrderBook without needing full PM dependencies
 
 import sys
 import os
+import io
+
+# Wrap stdout for UTF-8 safety on Windows (emoji chars fail on cp1252)
+if hasattr(sys.stdout, 'buffer'):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
 sys.path.insert(0, '.')
 
 print("="*60)

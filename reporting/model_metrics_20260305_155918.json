@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "version": "xgb_v1.0.0",
+    "trained_on": "2026-03-05T15:59:18.781917",
+    "train_end_date": "2022-10-07 00:00:00",
+    "n_train_samples": 20000,
+    "n_features": 21,
+    "feature_cols": [
+      "price_to_ema50",
+      "price_to_ema200",
+      "ema50_to_200",
+      "ret_5d",
+      "ret_10d",
+      "ret_20d",
+      "ret_60d",
+      "rsi_14",
+      "rsi_28",
+      "macd",
+      "macd_sig",
+      "macd_hist",
+      "macd_cross",
+      "atr_pct",
+      "vol_20d",
+      "bb_pctb",
+      "bb_bw",
+      "adx_14",
+      "vol_ratio_20d",
+      "obv_normalized",
+      "gap_pct"
+    ],
+    "oos_auc": 0.0,
+    "oos_precision": 0.0,
+    "oos_recall": 0.0,
+    "oos_f1": 0.0,
+    "walk_forward_folds": 5,
+    "model_hash": "3e733c6d4fdb638a"
+  }
+}

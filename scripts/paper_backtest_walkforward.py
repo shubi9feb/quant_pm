@@ -102,9 +102,9 @@ def main(args):
         # if eod_prices are missing for many symbols, PortfolioManager will skip them; ok for synthetic demo
         report = pm.run_eod(
             eod_prices=eod_prices,
-            nifty_close=pd.Series([18000]),   # minimal support for regime detector
-            india_vix=pd.Series([15.0]),
-            fii_flows=pd.Series([500.0]),
+            nifty_close=pd.Series([18000.0] * 20),   # need ≥5 for regime EMA slope
+            india_vix=pd.Series([15.0] * 20),
+            fii_flows=pd.Series([500.0] * 20),
             feature_df=predict_df,
             trade_date=trade_date
         )

@@ -233,20 +233,23 @@ class DailyReportBuilder:
         rs = r.get("risk_status", {})
         d  = r.get("decisions", {})
 
-        print(f"""
-╔══════════════════════════════════════════════════════════════════╗
-║          DAILY PORTFOLIO REPORT — {r.get('report_date', 'N/A')}              ║
-║          Model: {r.get('model_version', 'N/A')} | {'📄 PAPER' if r.get('paper_mode') else '🔴 LIVE'}           ║
-╠══════════════════════════════════════════════════════════════════╣
-║  NAV:         ₹{ps.get('nav', 0):>12,.2f}   Total P&L: ₹{ps.get('total_pnl', 0):>10,.2f}  ║
-║  Positions:   {ps.get('open_positions', 0)}/{ps.get('max_positions', 8)}              Unrealised:₹{ps.get('unrealised_pnl', 0):>10,.2f}  ║
-║  Equity:      ₹{ps.get('equity_value', 0):>12,.2f}   Cash:      ₹{ps.get('cash_value', 0):>10,.2f}  ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Regime:      {rs.get('regime', 'N/A'):<20}  DrawdownState: {rs.get('drawdown_state', 'N/A'):<10}║
-║  Drawdown:    {rs.get('current_drawdown', 0):.2f}%          AllowNewLongs: {rs.get('allow_new_longs', True)}      ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Entries:     {d.get('entries_today', 0):<5}  Exits: {d.get('exits_today', 0):<5}  Rejected: {d.get('rejected_today', 0):<5}        ║
-╚══════════════════════════════════════════════════════════════════╝""")
+        try:
+            print(f"""
++==================================================================+
+|          DAILY PORTFOLIO REPORT -- {r.get('report_date', 'N/A')}              |
+|          Model: {r.get('model_version', 'N/A')} | {'PAPER' if r.get('paper_mode') else 'LIVE'}                    |
++==================================================================+
+|  NAV:         Rs{ps.get('nav', 0):>12,.2f}   Total P&L: Rs{ps.get('total_pnl', 0):>10,.2f}  |
+|  Positions:   {ps.get('open_positions', 0)}/{ps.get('max_positions', 8)}              Unrealised:Rs{ps.get('unrealised_pnl', 0):>10,.2f}  |
+|  Equity:      Rs{ps.get('equity_value', 0):>12,.2f}   Cash:      Rs{ps.get('cash_value', 0):>10,.2f}  |
++==================================================================+
+|  Regime:      {rs.get('regime', 'N/A'):<20}  DrawdownState: {rs.get('drawdown_state', 'N/A'):<10}|
+|  Drawdown:    {rs.get('current_drawdown', 0):.2f}%          AllowNewLongs: {rs.get('allow_new_longs', True)}      |
++==================================================================+
+|  Entries:     {d.get('entries_today', 0):<5}  Exits: {d.get('exits_today', 0):<5}  Rejected: {d.get('rejected_today', 0):<5}        |
++==================================================================+""")
+        except (UnicodeEncodeError, OSError):
+            log.info(f"[REPORT] Summary: NAV={ps.get('nav',0):.0f} | PnL={ps.get('total_pnl',0):.0f} | Pos={ps.get('open_positions',0)}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -358,20 +361,23 @@ class PerformanceTracker:
 
     def print_performance(self):
         m = self.compute_metrics()
-        print(f"""
-╔══════════════════════════════════════════════════════════╗
-║             PERFORMANCE SUMMARY                          ║
-╠══════════════════════════════════════════════════════════╣
-║  Total Return:    {m.get('total_return_pct', 0):>8.2f}%                         ║
-║  Ann. Return:     {m.get('annualised_return', 0):>8.2f}%                         ║
-║  Sharpe Ratio:    {m.get('sharpe_ratio', 0):>8.4f}                          ║
-║  Sortino Ratio:   {m.get('sortino_ratio', 0):>8.4f}                          ║
-║  Max Drawdown:   -{m.get('max_drawdown_pct', 0):>8.2f}%                         ║
-║  Calmar Ratio:    {m.get('calmar_ratio', 0):>8.4f}                          ║
-║  Win Rate:        {m.get('win_rate_pct', 0):>8.2f}%                         ║
-║  Expectancy:     ₹{m.get('expectancy_inr', 0):>8.2f}                          ║
-║  Total Trades:    {m.get('total_trades', 0):>8}                          ║
-╠══════════════════════════════════════════════════════════╣
-║  Go-Live Eligible: {'✅ YES' if m.get('go_live_eligible') else '❌ NO (see checks below)'}                   ║
-║  Paper Months:    {m.get('paper_months', 0):>6.1f} / {m.get('go_live_checks', {}).get('required_months', 6)}                        ║
-╚══════════════════════════════════════════════════════════╝""")
+        try:
+            print(f"""
++==========================================================+
+|             PERFORMANCE SUMMARY                          |
++==========================================================+
+|  Total Return:    {m.get('total_return_pct', 0):>8.2f}%                         |
+|  Ann. Return:     {m.get('annualised_return', 0):>8.2f}%                         |
+|  Sharpe Ratio:    {m.get('sharpe_ratio', 0):>8.4f}                          |
+|  Sortino Ratio:   {m.get('sortino_ratio', 0):>8.4f}                          |
+|  Max Drawdown:   -{m.get('max_drawdown_pct', 0):>8.2f}%                         |
+|  Calmar Ratio:    {m.get('calmar_ratio', 0):>8.4f}                          |
+|  Win Rate:        {m.get('win_rate_pct', 0):>8.2f}%                         |
+|  Expectancy:     Rs{m.get('expectancy_inr', 0):>8.2f}                          |
+|  Total Trades:    {m.get('total_trades', 0):>8}                          |
++==========================================================+
+|  Go-Live Eligible: {'YES' if m.get('go_live_eligible') else 'NO (see checks below)'}                          |
+|  Paper Months:    {m.get('paper_months', 0):>6.1f} / {m.get('go_live_checks', {}).get('required_months', 6)}                        |
++==========================================================+""")
+        except (UnicodeEncodeError, OSError):
+            log.info(f"[REPORT] Perf: Return={m.get('total_return_pct',0):.2f}% | Sharpe={m.get('sharpe_ratio',0):.4f}")

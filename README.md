@@ -215,33 +215,148 @@ Every decision is recorded in tamper-evident JSONL format:
 
 ## Quick Start
 
+### Prerequisites
 ```bash
-# 1. Install dependencies
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
+```
 
-# 2. Train the model (requires historical data)
-python -c "
-from portfolio_manager import PortfolioManager
-pm = PortfolioManager()
-results = pm.train_model(your_feature_df)
-"
+### 1. Train the Direction Model
 
-# 3. Run daily EOD cycle (paper mode)
+**Option A: Use Synthetic Data (for testing)**
+```bash
+python scripts/train_direction_model.py \
+  --synth \
+  --n-symbols 200 \
+  --n-days 400 \
+  --seed 42
+```
+
+**Option B: Use Real Historical Features**
+```bash
+python scripts/train_direction_model.py \
+  --features-path data/features_train.parquet
+```
+
+**Expected Output:**
+- Model saved to: `models/saved/model_xgb_v1_0_0.pkl`
+- Metrics saved to: `reporting/model_metrics_YYYYMMDD_HHMMSS.json`
+- OOS AUC, Precision, Recall, F1 displayed
+
+### 2. Run Paper Backtest
+
+**30-day synthetic backtest (smoke test):**
+```bash
+python scripts/paper_backtest_walkforward.py \
+  --synth \
+  --n-days 30 \
+  --n-symbols 80 \
+  --seed 42
+```
+
+**6-month full backtest:**
+```bash
+python scripts/paper_backtest_walkforward.py \
+  --synth \
+  --n-days 180 \
+  --n-symbols 150 \
+  --seed 42
+```
+
+**Expected Output:**
+- Summary: `reporting/walkforward_summary_YYYYMMDD_HHMMSS.json`
+- NAV series: `reporting/walkforward_nav_YYYYMMDD_HHMMSS.csv`
+- Trades log: `reporting/walkforward_trades_YYYYMMDD_HHMMSS.json`
+- Console displays: Sharpe, Max DD, Win Rate, Expectancy
+
+### 3. Run Unit Tests
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run specific test files
+pytest tests/test_orders_and_exits.py -v
+pytest tests/test_state_persistence.py -v
+pytest tests/test_training_and_backtest.py -v
+
+# With coverage report
+pytest tests/ -v --cov=. --cov-report=term-missing
+```
+
+### 4. Run Daily EOD Cycle (Demo)
+
+```bash
+# With synthetic data (demo mode)
 python portfolio_manager.py
+```
 
-# 4. Verify audit chain
+**Expected Output:**
+- Daily report: `reporting/daily/daily_report_YYYY-MM-DD.json`
+- Audit log: `audit/logs/audit_YYYY-MM-DD.jsonl`
+- State saved: `portfolio_state.json`
+- Order book: `order_book.jsonl`
+
+### 5. Verify Audit Chain
+
+```bash
 python -c "
 from audit.logger import AuditVerifier
-print(AuditVerifier.verify_date('2024-02-14'))
+result = AuditVerifier.verify_date('2026-02-20')
+print('✅ Audit chain valid' if result else '❌ Hash chain broken')
 "
+```
 
-# 5. Check go-live eligibility after 6+ months
+### 6. Check Go-Live Eligibility
+
+After 6+ months of paper trading:
+
+```bash
 python -c "
 from reporting.daily_report import PerformanceTracker
-# ... after recording daily NAVs
+tracker = PerformanceTracker()
+# Load historical NAV data
+tracker.go_live_eligible()
 tracker.print_performance()
 "
 ```
+
+**Gates for go-live:**
+- ✅ Sharpe Ratio ≥ 1.0
+- ✅ Max Drawdown ≤ 20%
+- ✅ Paper trading ≥ 6 months
+- ✅ Audit verification passes
+
+See `DOCS/PRE_GO_LIVE.md` for complete checklist.
+
+---
+
+## Testing & CI
+
+**Local Testing:**
+```bash
+# Verify Phase 1 components (atomic operations, order book)
+python verify_phase1.py
+
+# Run full test suite
+pytest tests/ -v --tb=short
+
+# Lint and format
+black --check .
+flake8 . --max-line-length=120
+```
+
+**CI Pipeline (GitHub Actions):**
+- Runs on every push/PR
+- Executes all unit tests
+- Trains synthetic model
+- Runs 30-day smoke backtest
+- Verifies audit chain integrity
+- See: `.github/workflows/ci.yml`
 
 ---
 

@@ -89,8 +89,11 @@ class RegimeDetector:
         current_price = nifty.iloc[-1]
         current_ema   = ema.iloc[-1]
 
-        # EMA slope over last 5 days
-        ema_slope = (ema.iloc[-1] - ema.iloc[-5]) / (ema.iloc[-5] + 1e-10)
+        # EMA slope over last 5 days (guard for short series)
+        if len(ema) >= 5:
+            ema_slope = (ema.iloc[-1] - ema.iloc[-5]) / (ema.iloc[-5] + 1e-10)
+        else:
+            ema_slope = 0.0
 
         above = current_price > current_ema
         trend_label = "ABOVE_EMA" if above else "BELOW_EMA"
