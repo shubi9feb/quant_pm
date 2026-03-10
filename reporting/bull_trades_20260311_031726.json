@@ -1,0 +1,16 @@
+[
+  {
+    "symbol": "STOCK_006",
+    "action": "STOP_HIT",
+    "quantity": 15,
+    "price": 818.95,
+    "value": 12284.27,
+    "reason": "stop_loss_triggered",
+    "model_prob": 0.703,
+    "stop_price": 902.92,
+    "cost_inr": 29.33,
+    "client_order_id": "QPM_20260311_FE36FB62",
+    "timestamp": "2026-03-11T03:17:04.245310",
+    "realised_pnl": -1853.16
+  }
+]
